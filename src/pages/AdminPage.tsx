@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Coffee, Grid3X3, Tag, Settings,
   BarChart3, QrCode, LogOut, Plus, Edit2,
   Trash2, TrendingUp, DollarSign, Users, ShoppingBag,
-  ArrowUpRight, ArrowDownRight, Moon, Sun, Loader2
+  Moon, Sun, Loader2
 } from 'lucide-react';
 import { useStore } from '@/stores/useStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -266,7 +266,7 @@ export function AdminPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto flex">
+      <div className="max-w-7xl mx-auto flex min-w-0">
         {/* Sidebar */}
         <aside className="hidden lg:block w-64 sticky top-[60px] h-[calc(100vh-60px)] border-l border-border/50 p-4">
           <nav className="space-y-1">
@@ -314,7 +314,7 @@ export function AdminPage() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-6 pb-40 lg:pb-6">
+        <main className="min-w-0 flex-1 overflow-hidden p-3 pb-40 sm:p-4 lg:p-6 lg:pb-6">
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <DashboardTab
@@ -371,10 +371,10 @@ function DashboardTab({
   productsCount,
 }: DashboardTabProps) {
   const stats = [
-    { label: 'إجمالي المبيعات', value: totalSales, change: '+١٢٪', up: true, icon: DollarSign },
-    { label: 'الطلبات اليوم', value: ordersToday, change: '+٨٪', up: true, icon: ShoppingBag },
-    { label: 'الزيارات', value: visits, change: '+٢٣٪', up: true, icon: Users },
-    { label: 'المنتجات', value: String(productsCount), change: '+٢', up: true, icon: Coffee },
+    { label: 'إجمالي المبيعات', value: totalSales, icon: DollarSign },
+    { label: 'الطلبات اليوم', value: ordersToday, icon: ShoppingBag },
+    { label: 'الزيارات', value: visits, icon: Users },
+    { label: 'المنتجات', value: String(productsCount), icon: Coffee },
   ];
 
   return (
@@ -397,15 +397,9 @@ function DashboardTab({
               transition={{ delay: i * 0.05 }}
               className="bg-card rounded-2xl p-4 border border-border/50 shadow-premium"
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center mb-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Icon className="h-5 w-5 text-primary" />
-                </div>
-                <div className={`flex items-center gap-0.5 text-xs font-medium ${
-                  stat.up ? 'text-emerald-500' : 'text-rose-500'
-                }`}>
-                  {stat.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  {stat.change}
                 </div>
               </div>
               <p className="text-2xl font-black">{stat.value}</p>
@@ -627,7 +621,7 @@ function ProductsTab() {
       exit={{ opacity: 0 }}
       className="space-y-4"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold">المنتجات ({products.length})</h2>
         <Button size="sm" onClick={openAddDialog} className="gap-1 rounded-xl">
           <Plus className="h-4 w-4" />
@@ -640,23 +634,89 @@ function ProductsTab() {
           <div className="flex items-center justify-center py-16">
             <Spinner className="h-8 w-8" />
           </div>
+        ) : products.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">
+            لا توجد منتجات حالياً
+          </div>
         ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="text-right px-4 py-3 font-medium">المنتج</th>
-                <th className="text-right px-4 py-3 font-medium">الفئة</th>
-                <th className="text-right px-4 py-3 font-medium">السعر</th>
-                <th className="text-right px-4 py-3 font-medium">الحالة</th>
-                <th className="text-right px-4 py-3 font-medium">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
+          <>
+            <div className="divide-y divide-border/50 md:hidden">
               {products.map((product) => (
-                <tr key={product.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                <article key={product.id} className="p-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-14 w-14 shrink-0 rounded-xl object-cover"
+                    />
+                    <div className="min-w-0 flex-1 text-right">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <p className="min-w-0 flex-1 break-words font-bold leading-6">{product.name}</p>
+                        <Badge
+                          variant={product.available ? 'default' : 'secondary'}
+                          className="shrink-0 text-[11px]"
+                        >
+                          {product.available ? 'متاح' : 'غير متاح'}
+                        </Badge>
+                      </div>
+                      {product.description && (
+                        <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-muted-foreground">
+                          {product.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="min-w-0 rounded-xl bg-muted/30 p-2 text-right">
+                      <span className="block text-muted-foreground">الفئة</span>
+                      <p className="truncate font-medium">
+                        {categories.find((c) => c.id === product.categoryId)?.name || 'غير محدد'}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-xl bg-muted/30 p-2 text-right">
+                      <span className="block text-muted-foreground">السعر</span>
+                      {product.offerPrice !== undefined ? (
+                        <p className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 font-bold">
+                          <span className="text-primary">{product.offerPrice.toLocaleString()}</span>
+                          <span className="text-[11px] text-muted-foreground line-through">
+                            {product.price.toLocaleString()}
+                          </span>
+                        </p>
+                      ) : (
+                        <p className="font-bold">{product.price.toLocaleString()}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEditDialog(product)}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500" onClick={() => openDeleteDialog(product)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="text-right px-4 py-3 font-medium">المنتج</th>
+                    <th className="text-right px-4 py-3 font-medium">الفئة</th>
+                    <th className="text-right px-4 py-3 font-medium">السعر</th>
+                    <th className="text-right px-4 py-3 font-medium">الحالة</th>
+                    <th className="text-right px-4 py-3 font-medium">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {products.map((product) => (
+                    <tr key={product.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
                       <img
                         src={product.image}
                         alt={product.name}
@@ -705,15 +765,16 @@ function ProductsTab() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
       {/* Product Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto p-4 sm:max-w-2xl sm:p-6" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right">
               {dialogMode === 'add' ? 'إضافة منتج جديد' : 'تعديل المنتج'}
@@ -824,7 +885,7 @@ function ProductsTab() {
               </div>
             </div>
 
-            <DialogFooter className="flex gap-2 justify-end pt-4">
+            <DialogFooter className="flex gap-2 justify-end pt-4 sm:flex-row">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>إلغاء</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -1192,16 +1253,16 @@ function OffersTab() {
               key={offer.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="bg-card rounded-2xl p-4 border border-border/50 shadow-premium flex items-center gap-4"
+              className="bg-card rounded-2xl p-4 border border-border/50 shadow-premium flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center"
             >
               <img
                 src={offer.image}
                 alt={offer.name}
-                className="w-16 h-16 rounded-xl object-cover"
+                className="w-16 h-16 shrink-0 rounded-xl object-cover"
               />
-              <div className="flex-1">
-                <h3 className="font-bold">{offer.name}</h3>
-                <div className="flex items-center gap-2 mt-1">
+              <div className="min-w-0 flex-1">
+                <h3 className="break-words font-bold">{offer.name}</h3>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
                   <Badge className="bg-rose-500 text-white text-xs">خصم {discount}%</Badge>
                   <span className="text-primary font-bold">{offer.offerPrice?.toLocaleString()} د.ع</span>
                   <span className="text-muted-foreground line-through text-xs">
@@ -1209,7 +1270,7 @@ function OffersTab() {
                   </span>
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex shrink-0 gap-1 self-end sm:self-auto">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(offer)}>
                   <Edit2 className="h-4 w-4" />
                 </Button>

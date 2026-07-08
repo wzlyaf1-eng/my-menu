@@ -434,15 +434,17 @@ export const useStore = create<AppState>()(
 
           const { data, error } = await supabase
             .from('products')
-            .update(dbUpdates)
+            .update(dbUpdates, { count: 'exact' })
             .eq('id', id)
-            .select('*')
-            .single();
+            .select('*');
           if (error) throw error;
-          const savedProduct = data ? mapProductRow(data as ProductRow) : null;
+          const savedProduct = data?.[0] ? mapProductRow(data[0] as ProductRow) : null;
+          if (!savedProduct) {
+            throw new Error('Product was not found or could not be updated.');
+          }
           set((state) => ({
             products: sortByLatestUpdate(
-              state.products.map((p) => (p.id === id ? savedProduct || { ...p, ...updates, updatedAt } : p))
+              state.products.map((p) => (p.id === id ? savedProduct : p))
             ),
           }));
         } catch (error) {

@@ -98,6 +98,23 @@
     overflow-x: hidden;
   }
 
+  [data-sonner-toast][data-styled='true'] {
+    background: hsl(var(--popover) / 1) !important;
+    border-color: hsl(var(--border) / 1) !important;
+    color: hsl(var(--popover-foreground) / 1) !important;
+    box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.28), 0 8px 16px -12px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  [data-sonner-toast][data-styled='true'] [data-description] {
+    color: hsl(var(--muted-foreground) / 1) !important;
+  }
+
+  [data-sonner-toast][data-styled='true'] [data-close-button] {
+    background: hsl(var(--popover) / 1) !important;
+    border-color: hsl(var(--border) / 1) !important;
+    color: hsl(var(--popover-foreground) / 1) !important;
+  }
+
   /* Arabic typography improvements */
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Tajawal', 'Noto Naskh Arabic', system-ui, sans-serif;
