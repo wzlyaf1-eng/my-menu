@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { ImageUploadInput } from '@/components/shared/ImageUploadInput';
 import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -711,8 +712,8 @@ function ProductsTab() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="prod-image">رابط الصورة</Label>
-                <Input id="prod-image" value={image} onChange={e => setImage(e.target.value)} placeholder="https://example.com/image.jpg" />
+                <Label htmlFor="prod-image">الصورة (رفع ملف أو رابط)</Label>
+                <ImageUploadInput id="prod-image" value={image} onChange={setImage} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="prod-time">وقت التحضير (مثال: ١٠ دقائق)</Label>
