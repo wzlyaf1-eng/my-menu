@@ -92,7 +92,10 @@ export function MenuPage() {
           filtered = filtered.filter((p) => p.isNew);
           break;
         case 'offers':
-          filtered = filtered.filter((p) => p.offerPrice);
+          filtered = filtered.filter((p) => p.offerPrice !== undefined);
+          break;
+        case 'favorites':
+          filtered = filtered.filter((p) => favorites.includes(p.id));
           break;
         case 'seasonal':
           filtered = filtered.filter((p) => p.seasonal);
@@ -103,7 +106,7 @@ export function MenuPage() {
     }
 
     return filtered;
-  }, [searchQuery, activeFilter, visibleProducts, categories]);
+  }, [searchQuery, activeFilter, visibleProducts, categories, favorites]);
 
   const categoryProductSections = useMemo(
     () =>
@@ -127,7 +130,7 @@ export function MenuPage() {
   const showLoadError = !!loadError && products.length === 0;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-32">
       <Header />
 
       {/* Main Content */}
@@ -231,8 +234,9 @@ export function MenuPage() {
         )}
 
         {/* Favorites Section */}
-        {favoriteProducts.length > 0 && (
-          <section id="favorites-section" className="px-4 py-4 max-w-2xl mx-auto">
+        <section id="favorites-section" className="px-4 py-4 max-w-2xl mx-auto">
+          {favoriteProducts.length > 0 ? (
+            <>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-1 h-5 bg-rose-500 rounded-full" />
               <h2 className="font-bold text-lg">المفضلة</h2>
@@ -245,8 +249,15 @@ export function MenuPage() {
                 <ProductCard key={product.id} product={product} index={index} />
               ))}
             </div>
-          </section>
-        )}
+            </>
+          ) : (
+            activeFilter === 'favorites' && (
+              <div className="rounded-2xl border border-border/50 bg-card p-6 text-center text-sm text-muted-foreground">
+                لا توجد منتجات في المفضلة حالياً
+              </div>
+            )
+          )}
+        </section>
 
         {/* Contact Section */}
         <ContactSection />

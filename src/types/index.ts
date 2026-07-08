@@ -106,4 +106,4 @@ export interface StoreSettings {
   isOpen: boolean;
 }
 
-export type FilterType = 'all' | 'seasonal' | 'bestsellers' | 'new' | 'offers' | `cat:${string}`;
+export type FilterType = 'all' | 'seasonal' | 'bestsellers' | 'new' | 'offers' | 'favorites' | `cat:${string}`;

@@ -12,11 +12,12 @@ const navItems = [
 ];
 
 export function BottomNav() {
-  const { setMoodFilterOpen, setCartOpen, isMoodFilterOpen, isCartOpen, cartCount } = useStore();
+  const { setMoodFilterOpen, setCartOpen, setActiveFilter, isMoodFilterOpen, isCartOpen, cartCount } = useStore();
 
   const handleClick = (id: string) => {
     switch (id) {
       case 'menu':
+        setActiveFilter('all');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         break;
       case 'mood':
@@ -26,7 +27,8 @@ export function BottomNav() {
         setCartOpen(true);
         break;
       case 'favorites':
-        document.getElementById('favorites-section')?.scrollIntoView({ behavior: 'smooth' });
+        setActiveFilter('favorites');
+        document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         break;
       case 'contact':
         document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -39,9 +41,9 @@ export function BottomNav() {
       initial={{ y: 80 }}
       animate={{ y: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.2 }}
-      className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 pb-safe"
+      className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-border/60 bg-background/90 shadow-premium-lg backdrop-blur-xl supports-[padding:max(0px)]:bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
     >
-      <div className="flex items-center justify-around max-w-2xl mx-auto px-2 py-2">
+      <div className="grid grid-cols-5 max-w-2xl mx-auto px-1.5 py-1.5">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -54,7 +56,7 @@ export function BottomNav() {
               whileTap={{ scale: 0.9 }}
               onClick={() => handleClick(item.id)}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors relative',
+                'relative flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 transition-colors',
                 isActive
                   ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground hover:text-foreground'

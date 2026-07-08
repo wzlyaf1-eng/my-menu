@@ -33,7 +33,7 @@ export function ProductModal() {
 
   const totalPrice = useMemo(() => {
     if (!product) return 0;
-    const basePrice = product.offerPrice || product.price;
+    const basePrice = product.offerPrice ?? product.price;
     const sizePrice = selectedSize?.price || 0;
     const customPrice = customizations.reduce((sum, sc) => {
       const group = product.customizations?.find((cg) => cg.id === sc.groupId);
@@ -209,7 +209,7 @@ export function ProductModal() {
                   <div />
                 )}
                 <div className="flex items-center gap-1.5">
-                  {product.offerPrice ? (
+                  {product.offerPrice !== undefined ? (
                     <>
                       <span className="text-2xl font-bold text-primary">
                         {formatPrice(product.offerPrice)}

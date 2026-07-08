@@ -8,7 +8,7 @@ export function OffersBanner() {
   const [current, setCurrent] = useState(0);
 
   const offers = useMemo(
-    () => products.filter((p) => p.available !== false && p.offerPrice),
+    () => products.filter((p) => p.available !== false && p.offerPrice !== undefined),
     [products]
   );
 
@@ -24,7 +24,7 @@ export function OffersBanner() {
 
   const offer = offers[current];
   const discount = Math.round(
-    ((offer.price - (offer.offerPrice || 0)) / offer.price) * 100
+    ((offer.price - (offer.offerPrice ?? offer.price)) / offer.price) * 100
   );
 
   const formatPrice = (price: number) => new Intl.NumberFormat('ar-IQ').format(price);
@@ -62,7 +62,7 @@ export function OffersBanner() {
             <h3 className="font-bold text-base truncate">{offer.name}</h3>
             <p className="text-xs text-white/80 line-clamp-1 mb-2">{offer.description}</p>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold">{formatPrice(offer.offerPrice || 0)} د.ع</span>
+              <span className="text-lg font-bold">{formatPrice(offer.offerPrice ?? offer.price)} د.ع</span>
               <span className="text-sm line-through text-white/60">
                 {formatPrice(offer.price)} د.ع
               </span>

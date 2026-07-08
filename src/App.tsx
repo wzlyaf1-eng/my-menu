@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useStore } from '@/stores/useStore';
 import { MenuPage } from '@/pages/MenuPage';
@@ -33,7 +33,7 @@ function App() {
   }, [isDarkMode]);
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<MenuPage />} />
         <Route path="/admin" element={<AdminPage />} />
@@ -48,7 +48,7 @@ function App() {
           },
         }}
       />
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 

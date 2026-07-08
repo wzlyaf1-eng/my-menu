@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/stores/useStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
 import { moods as demoMoods } from '@/data/demo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,13 +57,25 @@ const categoryData = [
 ];
 
 const COLORS = ['#D48234', '#E8A853', '#8B6914', '#C4956A', '#A67B5B'];
+const configuredAdminPassword = import.meta.env.VITE_ADMIN_PASSWORD as string | undefined;
+
+function getAdminAuthToken(password: string) {
+  let hash = 0;
+  for (let index = 0; index < password.length; index += 1) {
+    hash = Math.imul(31, hash) + password.charCodeAt(index);
+  }
+  return `v1:${hash >>> 0}`;
+}
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const { session, isAuthLoading } = useAuth();
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(
+    () =>
+      !!configuredAdminPassword &&
+      localStorage.getItem('my-menu-admin-auth') === getAdminAuthToken(configuredAdminPassword)
+  );
   const { toggleDarkMode, isDarkMode, products, categories, fetchData } = useStore();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,12 +83,12 @@ export function AdminPage() {
   const [visitsCount, setVisitsCount] = useState<number>(0);
 
   useEffect(() => {
-    if (!session) return;
+    if (!isAdminAuthenticated) return;
     fetchData();
-  }, [fetchData, session]);
+  }, [fetchData, isAdminAuthenticated]);
 
   useEffect(() => {
-    if (!session || !isSupabaseConfigured) return;
+    if (!isAdminAuthenticated || !isSupabaseConfigured) return;
 
     async function loadAdminStats() {
       try {
@@ -100,7 +111,7 @@ export function AdminPage() {
     }
 
     loadAdminStats();
-  }, [session]);
+  }, [isAdminAuthenticated]);
 
   const dynamicSalesData = useMemo(() => {
     if (!isSupabaseConfigured || orders.length === 0) {
@@ -163,34 +174,30 @@ export function AdminPage() {
 
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!isSupabaseConfigured) {
-      toast.error('Supabase غير مهيأ لتسجيل الدخول');
+    if (!configuredAdminPassword) {
+      toast.error('يرجى إضافة VITE_ADMIN_PASSWORD إلى ملف البيئة');
       return;
     }
     setIsSigningIn(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (error) throw error;
-      toast.success('تم تسجيل الدخول بنجاح');
-    } catch {
-      toast.error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
-    } finally {
+    window.setTimeout(() => {
+      if (password === configuredAdminPassword) {
+        localStorage.setItem('my-menu-admin-auth', getAdminAuthToken(configuredAdminPassword));
+        setIsAdminAuthenticated(true);
+        setPassword('');
+        toast.success('تم تسجيل الدخول بنجاح');
+      } else {
+        toast.error('كلمة المرور غير صحيحة');
+      }
       setIsSigningIn(false);
-    }
+    }, 150);
   };
 
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Spinner className="h-10 w-10" />
-      </div>
-    );
-  }
+  const handleLogout = () => {
+    localStorage.removeItem('my-menu-admin-auth');
+    setIsAdminAuthenticated(false);
+  };
 
-  if (!session) {
+  if (!isAdminAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-stone-950 dark:to-stone-900 p-4">
         <motion.div
@@ -209,15 +216,6 @@ export function AdminPage() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-3">
-            <Input
-              type="email"
-              placeholder="البريد الإلكتروني"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-12 rounded-xl text-center"
-              dir="ltr"
-              required
-            />
             <Input
               type="password"
               placeholder="كلمة المرور"
@@ -258,7 +256,7 @@ export function AdminPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => supabase.auth.signOut()}
+              onClick={handleLogout}
               className="gap-1"
             >
               <LogOut className="h-4 w-4" />
@@ -293,22 +291,22 @@ export function AdminPage() {
         </aside>
 
         {/* Mobile Tabs */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 p-2 overflow-x-auto hide-scrollbar">
-          <div className="flex gap-1 min-w-max px-2">
+        <div className="lg:hidden fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 rounded-2xl border border-border/60 bg-background/90 p-2 shadow-premium-lg backdrop-blur-xl">
+          <div className="grid grid-cols-4 gap-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-medium transition-all ${
                     activeTab === item.id
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="max-w-full truncate">{item.label}</span>
                 </button>
               );
             })}
@@ -316,7 +314,7 @@ export function AdminPage() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6">
+        <main className="flex-1 p-4 lg:p-6 pb-40 lg:pb-6">
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <DashboardTab
@@ -530,7 +528,7 @@ function ProductsTab() {
     setName(product.name);
     setDescription(product.description || '');
     setPrice(product.price);
-    setOfferPrice(product.offerPrice || undefined);
+    setOfferPrice(product.offerPrice);
     setImage(product.image || '');
     setCategoryId(product.categoryId || categories[0]?.id || '');
     setAvailable(product.available !== false);
@@ -563,7 +561,7 @@ function ProductsTab() {
       toast.error('يرجى تحديد الفئة');
       return;
     }
-    if (offerPrice && offerPrice >= price) {
+    if (offerPrice !== undefined && offerPrice >= price) {
       toast.error('سعر العرض يجب أن يكون أقل من السعر الأساسي');
       return;
     }
@@ -572,7 +570,7 @@ function ProductsTab() {
       name: name.trim(),
       description: description.trim(),
       price: Number(price),
-      offerPrice: offerPrice ? Number(offerPrice) : undefined,
+      offerPrice: offerPrice !== undefined ? Number(offerPrice) : undefined,
       image: image.trim() || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=300',
       categoryId,
       available,
@@ -676,7 +674,7 @@ function ProductsTab() {
                     {categories.find((c) => c.id === product.categoryId)?.name || 'غير محدد'}
                   </td>
                   <td className="px-4 py-3 font-medium text-right">
-                    {product.offerPrice ? (
+                    {product.offerPrice !== undefined ? (
                       <div>
                         <span className="text-primary">{product.offerPrice.toLocaleString()}</span>
                         <span className="text-muted-foreground line-through text-xs mr-2">
@@ -754,7 +752,7 @@ function ProductsTab() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="prod-offer">سعر العرض (د.ع - اختياري)</Label>
-                <Input id="prod-offer" type="number" value={offerPrice || ''} onChange={e => setOfferPrice(e.target.value ? Number(e.target.value) : undefined)} placeholder="اتركه فارغاً في حال عدم وجود عرض" />
+                <Input id="prod-offer" type="number" value={offerPrice ?? ''} onChange={e => setOfferPrice(e.target.value ? Number(e.target.value) : undefined)} placeholder="اتركه فارغاً في حال عدم وجود عرض" />
               </div>
             </div>
 
@@ -1090,8 +1088,8 @@ function CategoriesTab() {
 // Offers Tab
 function OffersTab() {
   const { products, updateProduct } = useStore();
-  const offers = products.filter((p) => p.offerPrice);
-  const availableProducts = products.filter((p) => !p.offerPrice);
+  const offers = products.filter((p) => p.offerPrice !== undefined);
+  const availableProducts = products.filter((p) => p.offerPrice === undefined);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
@@ -1113,7 +1111,7 @@ function OffersTab() {
     setDialogMode('edit');
     setSelectedProduct(product);
     setProductId(product.id);
-    setOfferPrice(product.offerPrice || '');
+    setOfferPrice(product.offerPrice ?? '');
     setIsDialogOpen(true);
   };
 
@@ -1188,7 +1186,7 @@ function OffersTab() {
           </div>
         )}
         {offers.map((offer) => {
-          const discount = Math.round(((offer.price - (offer.offerPrice || 0)) / offer.price) * 100);
+          const discount = Math.round(((offer.price - (offer.offerPrice ?? offer.price)) / offer.price) * 100);
           return (
             <motion.div
               key={offer.id}

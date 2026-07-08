@@ -51,7 +51,7 @@ export function ProductCard({ product, index }: ProductCardProps) {
               جديد
             </Badge>
           )}
-          {product.offerPrice && (
+          {product.offerPrice !== undefined && (
             <Badge className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5">
               <BadgePercent className="h-3 w-3 mr-0.5" />
               عرض
@@ -103,7 +103,7 @@ export function ProductCard({ product, index }: ProductCardProps) {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            {product.offerPrice ? (
+            {product.offerPrice !== undefined ? (
               <>
                 <span className="text-lg font-bold text-primary price-tag">
                   {formatPrice(product.offerPrice)}
