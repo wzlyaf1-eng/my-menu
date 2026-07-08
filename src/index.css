@@ -1,0 +1,276 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Kunafa Bilali Brand Colors - Warm Amber/Brown Theme */
+    --background: 35 30% 97%;
+    --foreground: 25 30% 12%;
+    --card: 35 25% 99%;
+    --card-foreground: 25 30% 12%;
+    --popover: 35 25% 99%;
+    --popover-foreground: 25 30% 12%;
+    --primary: 28 75% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 25% 92%;
+    --secondary-foreground: 25 30% 18%;
+    --muted: 30 15% 92%;
+    --muted-foreground: 25 10% 45%;
+    --accent: 28 75% 52%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 28 75% 52%;
+    --radius: 1rem;
+
+    /* Custom brand colors */
+    --kb-amber: 28 75% 52%;
+    --kb-amber-light: 35 80% 65%;
+    --kb-amber-dark: 24 70% 42%;
+    --kb-brown: 25 35% 22%;
+    --kb-brown-light: 25 20% 40%;
+    --kb-cream: 35 40% 96%;
+    --kb-gold: 42 80% 55%;
+    --kb-warm-gray: 30 10% 55%;
+
+    --sidebar-background: 35 30% 97%;
+    --sidebar-foreground: 25 30% 12%;
+    --sidebar-primary: 28 75% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 25% 92%;
+    --sidebar-accent-foreground: 25 30% 18%;
+    --sidebar-border: 30 20% 88%;
+    --sidebar-ring: 28 75% 52%;
+  }
+
+  .dark {
+    --background: 25 20% 8%;
+    --foreground: 35 20% 92%;
+    --card: 25 18% 11%;
+    --card-foreground: 35 20% 92%;
+    --popover: 25 18% 11%;
+    --popover-foreground: 35 20% 92%;
+    --primary: 28 75% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 25 15% 18%;
+    --secondary-foreground: 35 20% 85%;
+    --muted: 25 12% 18%;
+    --muted-foreground: 30 10% 55%;
+    --accent: 28 75% 52%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 25 12% 20%;
+    --input: 25 12% 20%;
+    --ring: 28 75% 52%;
+
+    --sidebar-background: 25 20% 8%;
+    --sidebar-foreground: 35 20% 92%;
+    --sidebar-primary: 28 75% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 25 15% 18%;
+    --sidebar-accent-foreground: 35 20% 85%;
+    --sidebar-border: 25 12% 20%;
+    --sidebar-ring: 28 75% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Tajawal', 'Noto Naskh Arabic', system-ui, -apple-system, sans-serif;
+    direction: rtl;
+  }
+
+  /* Arabic typography improvements */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Tajawal', 'Noto Naskh Arabic', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0;
+    word-spacing: 0.02em;
+  }
+
+  p {
+    line-height: 1.8;
+    word-spacing: 0.01em;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--kb-amber) / 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--kb-amber) / 0.5);
+  }
+}
+
+@layer utilities {
+  /* RTL utilities */
+  .rtl {
+    direction: rtl;
+  }
+
+  .ltr {
+    direction: ltr;
+  }
+
+  /* Glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .glass {
+    background: rgba(30, 25, 20, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Premium shadow */
+  .shadow-premium {
+    box-shadow: 0 4px 24px -4px rgba(210, 130, 50, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  }
+
+  .shadow-premium-lg {
+    box-shadow: 0 8px 40px -8px rgba(210, 130, 50, 0.2), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--kb-amber)) 0%, hsl(var(--kb-amber-dark)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted) / 0.5) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Fade in animation */
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Slide up animation */
+  .slide-up {
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Scale animation */
+  .scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Touch friendly tap target */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Price styling */
+  .price-tag {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  /* Focus visible ring */
+  .focus-ring:focus-visible {
+    outline: none;
+    ring: 2px;
+    ring-offset: 2px;
+    ring-color: hsl(var(--kb-amber));
+  }
+}
+
+/* Selection color */
+::selection {
+  background: hsl(var(--kb-amber) / 0.3);
+  color: inherit;
+}

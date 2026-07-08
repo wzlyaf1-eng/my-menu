@@ -1,0 +1,27 @@
+{
+  "name": "كنافة بلالي - القائمة الرقمية",
+  "short_name": "كنافة بلالي",
+  "description": "قائمة رقمية تفاعلية لكوفي شوب وبيكري كنافة بلالي",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color":="#faf7f2",
+  "theme_color": "#D48234",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
