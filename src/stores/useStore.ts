@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CartItem, Product, Category, StoreSettings, FilterType } from '@/types';
-import { products as demoProducts, categories as demoCategories, storeSettings as demoStoreSettings } from '@/data/demo';
+import { storeSettings as defaultStoreSettings } from '@/data/demo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface AppState {
@@ -181,10 +181,11 @@ export const useStore = create<AppState>()(
       toggleDarkMode: () =>
         set((state) => ({ isDarkMode: !state.isDarkMode })),
 
-      // Dynamic Data Initial State
-      products: demoProducts,
-      categories: demoCategories,
-      storeSettings: demoStoreSettings,
+      // Dynamic Data Initial State — empty until fetched from the database,
+      // so a broken connection is visible instead of silently showing demo data.
+      products: [],
+      categories: [],
+      storeSettings: defaultStoreSettings,
       isDbConnected: isSupabaseConfigured,
       isLoading: false,
 
@@ -243,10 +244,10 @@ export const useStore = create<AppState>()(
           }));
 
           const updatedState: Partial<AppState> = {
-            isDbConnected: true
+            isDbConnected: true,
+            categories: mappedCategories,
+            products: mappedProducts
           };
-          if (mappedCategories.length > 0) updatedState.categories = mappedCategories;
-          if (mappedProducts.length > 0) updatedState.products = mappedProducts;
 
           if (settingsData) {
             updatedState.storeSettings = {
