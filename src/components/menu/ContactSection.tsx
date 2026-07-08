@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 export function ContactSection() {
   const { storeSettings } = useStore();
+  const logo = storeSettings.logo || '/images/logo.jpg';
   const handleShare = async () => {
     try {
       if (navigator.share) {
@@ -35,7 +36,7 @@ export function ContactSection() {
       >
         <div className="text-center mb-4">
           <img
-            src="/images/logo.jpg"
+            src={logo}
             alt={storeSettings.name}
             className="w-16 h-16 rounded-2xl mx-auto mb-3 object-cover shadow-premium"
           />
@@ -54,48 +55,54 @@ export function ContactSection() {
             </div>
           </div>
 
-          <a
-            href={`tel:${storeSettings.phone}`}
-            className="flex items-center gap-3 text-sm hover:bg-muted/50 p-2 rounded-xl transition-colors"
-          >
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Phone className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <span className="font-medium">اتصل بنا</span>
-              <p className="text-muted-foreground text-xs ltr">{storeSettings.phone}</p>
-            </div>
-          </a>
+          {storeSettings.phone && (
+            <a
+              href={`tel:${storeSettings.phone}`}
+              className="flex items-center gap-3 text-sm hover:bg-muted/50 p-2 rounded-xl transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Phone className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <span className="font-medium">اتصل بنا</span>
+                <p className="text-muted-foreground text-xs ltr">{storeSettings.phone}</p>
+              </div>
+            </a>
+          )}
 
-          <a
-            href={`https://wa.me/${storeSettings.whatsapp}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 text-sm hover:bg-muted/50 p-2 rounded-xl transition-colors"
-          >
-            <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
-              <MessageCircle className="h-4 w-4 text-green-500" />
-            </div>
-            <div>
-              <span className="font-medium">واتساب</span>
-              <p className="text-muted-foreground text-xs ltr">{storeSettings.whatsapp}</p>
-            </div>
-          </a>
+          {storeSettings.whatsapp && (
+            <a
+              href={`https://wa.me/${storeSettings.whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 text-sm hover:bg-muted/50 p-2 rounded-xl transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+                <MessageCircle className="h-4 w-4 text-green-500" />
+              </div>
+              <div>
+                <span className="font-medium">واتساب</span>
+                <p className="text-muted-foreground text-xs ltr">{storeSettings.whatsapp}</p>
+              </div>
+            </a>
+          )}
 
-          <a
-            href={`https://instagram.com/${storeSettings.instagram}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 text-sm hover:bg-muted/50 p-2 rounded-xl transition-colors"
-          >
-            <div className="w-9 h-9 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0">
-              <Instagram className="h-4 w-4 text-pink-500" />
-            </div>
-            <div>
-              <span className="font-medium">انستغرام</span>
-              <p className="text-muted-foreground text-xs">@{storeSettings.instagram}</p>
-            </div>
-          </a>
+          {storeSettings.instagram && (
+            <a
+              href={`https://instagram.com/${storeSettings.instagram}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 text-sm hover:bg-muted/50 p-2 rounded-xl transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0">
+                <Instagram className="h-4 w-4 text-pink-500" />
+              </div>
+              <div>
+                <span className="font-medium">انستغرام</span>
+                <p className="text-muted-foreground text-xs">@{storeSettings.instagram}</p>
+              </div>
+            </a>
+          )}
 
           {storeSettings.facebook && (
             <a

@@ -29,6 +29,7 @@ export interface Product {
   rating?: number;
   ratingCount?: number;
   offerPrice?: number;
+  updatedAt?: string;
 }
 
 export interface SizeOption {
@@ -105,4 +106,4 @@ export interface StoreSettings {
   isOpen: boolean;
 }
 
-export type FilterType = 'all' | 'hot-drinks' | 'cold-drinks' | 'desserts' | 'breakfast' | 'bakery' | 'seasonal' | 'bestsellers' | 'new' | 'offers';
+export type FilterType = 'all' | 'seasonal' | 'bestsellers' | 'new' | 'offers' | `cat:${string}`;

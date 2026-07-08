@@ -198,9 +198,6 @@ importers:
       globals:
         specifier: ^16.5.0
         version: 16.5.0
-      kimi-plugin-inspect-react:
-        specifier: ^1.0.3
-        version: 1.0.3(vite@7.3.6(@types/node@24.13.3)(jiti@1.21.7))
       postcss:
         specifier: ^8.5.6
         version: 8.5.16
@@ -2520,11 +2517,6 @@ packages:
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
-
-  kimi-plugin-inspect-react@1.0.3:
-    resolution: {integrity: sha512-dU0dYaFYvczJZWwsyAVQ2No2NTaycd93zk3zrbLj9IPwdZaLBK4d0cESz88lVju3rQuFiwRXYNDaCnbPxn4JcQ==}
-    peerDependencies:
-      vite: ^7.2.0
 
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -5617,19 +5609,6 @@ snapshots:
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
-
-  kimi-plugin-inspect-react@1.0.3(vite@7.3.6(@types/node@24.13.3)(jiti@1.21.7)):
-    dependencies:
-      '@babel/core': 7.29.7
-      '@babel/plugin-proposal-decorators': 7.29.7(@babel/core@7.29.7)
-      '@babel/preset-env': 7.29.7(@babel/core@7.29.7)
-      '@babel/preset-react': 7.29.7(@babel/core@7.29.7)
-      '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
-      '@babel/types': 7.29.7
-      magic-string: 0.30.21
-      vite: 7.3.6(@types/node@24.13.3)(jiti@1.21.7)
-    transitivePeerDependencies:
-      - supports-color
 
   levn@0.4.1:
     dependencies:

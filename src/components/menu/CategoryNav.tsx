@@ -2,31 +2,30 @@ import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Coffee, Snowflake, Cake, Sun, Croissant, Flame,
-  Percent, LayoutGrid
+  Percent, LayoutGrid, Grid3X3, Tag, IceCream, Utensils
 } from 'lucide-react';
 import { useStore } from '@/stores/useStore';
 import type { FilterType } from '@/types';
 import { cn } from '@/lib/utils';
 
 const iconMap: Record<string, React.ElementType> = {
-  Coffee, Snowflake, Cake, Sun, Croissant, Flame, Percent, LayoutGrid,
+  Coffee, Snowflake, Cake, Sun, Croissant, Flame, Percent, LayoutGrid, Grid3X3, Tag, IceCream, Utensils,
 };
 
-const filterItems: { id: FilterType; label: string }[] = [
+const staticFilterItems: { id: FilterType; label: string }[] = [
   { id: 'all', label: 'الكل' },
-  { id: 'hot-drinks', label: 'ساخن' },
-  { id: 'cold-drinks', label: 'بارد' },
-  { id: 'desserts', label: 'حلويات' },
-  { id: 'breakfast', label: 'إفطار' },
-  { id: 'bakery', label: 'مخبوزات' },
   { id: 'bestsellers', label: 'الأكثر مبيعاً' },
   { id: 'new', label: 'جديد' },
   { id: 'offers', label: 'عروض' },
 ];
 
 export function CategoryNav() {
-  const { activeFilter, setActiveFilter } = useStore();
+  const { activeFilter, setActiveFilter, categories } = useStore();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const filterItems = [
+    ...staticFilterItems,
+    ...categories.map((cat) => ({ id: `cat:${cat.id}` as FilterType, label: cat.name })),
+  ];
 
   return (
     <div className="sticky top-[60px] z-40 bg-background/95 backdrop-blur-sm border-b border-border/50">
@@ -61,7 +60,7 @@ export function CategoryNav() {
 }
 
 export function CategorySection() {
-  const { categories } = useStore();
+  const { categories, setActiveFilter } = useStore();
   return (
     <div className="px-4 py-4 max-w-2xl mx-auto">
       <div className="grid grid-cols-4 gap-3">
@@ -74,6 +73,10 @@ export function CategorySection() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setActiveFilter(`cat:${cat.id}`);
+                document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
               className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card border border-border/50 shadow-sm hover:shadow-premium transition-shadow"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">

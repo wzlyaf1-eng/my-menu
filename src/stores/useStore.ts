@@ -62,6 +62,7 @@ interface AppState {
   storeSettings: StoreSettings;
   isDbConnected: boolean;
   isLoading: boolean;
+  loadError: string | null;
 
   fetchData: () => Promise<void>;
   
@@ -79,6 +80,112 @@ interface AppState {
   submitOrder: (tableNumber: number | null, orderType: 'dine-in' | 'delivery', items: CartItem[], total: number) => Promise<void>;
   logVisit: () => Promise<void>;
   updateStoreSettings: (settings: StoreSettings) => Promise<void>;
+}
+
+type ProductRow = {
+  id: string;
+  name: string;
+  description?: string | null;
+  price?: number | string | null;
+  offer_price?: number | string | null;
+  offerPrice?: number | string | null;
+  image?: string | null;
+  category_id?: string | null;
+  categoryId?: string | null;
+  subcategory_id?: string | null;
+  subcategoryId?: string | null;
+  ingredients?: string[] | null;
+  preparation_time?: string | null;
+  preparationTime?: string | null;
+  calories?: number | null;
+  allergens?: string[] | null;
+  available?: boolean | null;
+  seasonal?: boolean | null;
+  bestseller?: boolean | null;
+  is_new?: boolean | null;
+  isNew?: boolean | null;
+  limited?: boolean | null;
+  moods?: string[] | null;
+  rating?: number | string | null;
+  rating_count?: number | string | null;
+  ratingCount?: number | string | null;
+  sizes?: Product['sizes'] | null;
+  customizations?: Product['customizations'] | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  updatedAt?: string | null;
+};
+
+type DbProductUpdates = Record<string, string | number | boolean | string[] | Product['sizes'] | Product['customizations'] | null | undefined>;
+
+const fallbackImage = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=300';
+
+function toNumber(value: number | string | null | undefined, fallback = 0) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function mapProductRow(prod: ProductRow): Product {
+  const offerPrice = prod.offer_price ?? prod.offerPrice;
+  const ratingCount = prod.rating_count ?? prod.ratingCount;
+
+  return {
+    id: prod.id,
+    name: prod.name,
+    description: prod.description || '',
+    price: toNumber(prod.price),
+    image: prod.image || '',
+    categoryId: prod.category_id || prod.categoryId || '',
+    subcategoryId: prod.subcategory_id || prod.subcategoryId || undefined,
+    ingredients: prod.ingredients || [],
+    preparationTime: prod.preparation_time || prod.preparationTime || '',
+    calories: prod.calories ?? undefined,
+    allergens: prod.allergens || [],
+    available: prod.available ?? true,
+    seasonal: prod.seasonal ?? false,
+    bestseller: prod.bestseller ?? false,
+    isNew: prod.is_new ?? prod.isNew ?? false,
+    limited: prod.limited ?? false,
+    moods: prod.moods || [],
+    rating: prod.rating === null || prod.rating === undefined ? undefined : toNumber(prod.rating),
+    ratingCount: ratingCount === null || ratingCount === undefined ? undefined : toNumber(ratingCount),
+    sizes: prod.sizes || [],
+    customizations: prod.customizations || [],
+    offerPrice: offerPrice === null || offerPrice === undefined ? undefined : toNumber(offerPrice),
+    updatedAt: prod.updated_at || prod.updatedAt || prod.created_at || undefined
+  };
+}
+
+function sortByLatestUpdate(products: Product[]) {
+  return [...products].sort((a, b) => {
+    const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+}
+
+function productToDb(product: Product) {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    image: product.image,
+    category_id: product.categoryId,
+    preparation_time: product.preparationTime,
+    calories: product.calories,
+    allergens: product.allergens,
+    available: product.available,
+    seasonal: product.seasonal,
+    bestseller: product.bestseller,
+    is_new: product.isNew,
+    limited: product.limited,
+    moods: product.moods,
+    sizes: product.sizes,
+    customizations: product.customizations,
+    offer_price: product.offerPrice ?? null
+  };
 }
 
 export const useStore = create<AppState>()(
@@ -117,12 +224,13 @@ export const useStore = create<AppState>()(
       clearCart: () => set({ cart: [] }),
       cartTotal: () =>
         get().cart.reduce((total, item) => {
+          const currentProduct = get().products.find((p) => p.id === item.product.id) || item.product;
           const sizePrice = item.selectedSize?.price || 0;
           const customPrice = item.selectedCustomizations.reduce(
             (sum, sc) =>
               sum +
               sc.optionIds.reduce((oSum, oid) => {
-                const group = item.product.customizations?.find(
+                const group = currentProduct.customizations?.find(
                   (cg) => cg.id === sc.groupId
                 );
                 const opt = group?.options.find((o) => o.id === oid);
@@ -130,7 +238,8 @@ export const useStore = create<AppState>()(
               }, 0),
             0
           );
-          return total + (item.product.price + sizePrice + customPrice) * item.quantity;
+          const basePrice = currentProduct.offerPrice ?? currentProduct.price;
+          return total + (basePrice + sizePrice + customPrice) * item.quantity;
         }, 0),
       cartCount: () => get().cart.reduce((c, i) => c + i.quantity, 0),
 
@@ -188,10 +297,20 @@ export const useStore = create<AppState>()(
       storeSettings: defaultStoreSettings,
       isDbConnected: isSupabaseConfigured,
       isLoading: false,
+      loadError: isSupabaseConfigured
+        ? null
+        : 'Supabase environment variables are missing. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.',
 
       fetchData: async () => {
-        if (!isSupabaseConfigured) return;
-        set({ isLoading: true });
+        if (!isSupabaseConfigured) {
+          set({
+            isDbConnected: false,
+            isLoading: false,
+            loadError: 'Supabase environment variables are missing. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+          });
+          return;
+        }
+        set({ isLoading: true, loadError: null });
         try {
           const { data: catData, error: catError } = await supabase
             .from('categories')
@@ -201,7 +320,8 @@ export const useStore = create<AppState>()(
 
           const { data: prodData, error: prodError } = await supabase
             .from('products')
-            .select('*');
+            .select('*')
+            .order('created_at', { ascending: false });
           if (prodError) throw prodError;
 
           const { data: settingsData, error: settingsError } = await supabase
@@ -218,35 +338,13 @@ export const useStore = create<AppState>()(
             sortOrder: cat.sort_order ?? cat.sortOrder ?? 0
           }));
 
-          const mappedProducts: Product[] = (prodData || []).map(prod => ({
-            id: prod.id,
-            name: prod.name,
-            description: prod.description || '',
-            price: prod.price || 0,
-            image: prod.image || '',
-            categoryId: prod.category_id || prod.categoryId || '',
-            subcategoryId: prod.subcategory_id || prod.subcategoryId,
-            ingredients: prod.ingredients || [],
-            preparationTime: prod.preparation_time || prod.preparationTime,
-            calories: prod.calories,
-            allergens: prod.allergens || [],
-            available: prod.available ?? true,
-            seasonal: prod.seasonal ?? false,
-            bestseller: prod.bestseller ?? false,
-            isNew: prod.is_new ?? prod.isNew ?? false,
-            limited: prod.limited ?? false,
-            moods: prod.moods || [],
-            rating: prod.rating,
-            ratingCount: prod.rating_count || prod.ratingCount,
-            sizes: prod.sizes || [],
-            customizations: prod.customizations || [],
-            offerPrice: prod.offer_price || prod.offerPrice
-          }));
+          const mappedProducts = sortByLatestUpdate((prodData || []).map((prod) => mapProductRow(prod as ProductRow)));
 
           const updatedState: Partial<AppState> = {
             isDbConnected: true,
             categories: mappedCategories,
-            products: mappedProducts
+            products: mappedProducts,
+            loadError: null
           };
 
           if (settingsData) {
@@ -267,8 +365,11 @@ export const useStore = create<AppState>()(
 
           set(updatedState);
         } catch (error) {
-          console.warn('Non-critical: Error fetching data from Supabase (app will run in fallback/demo mode):', error);
-          set({ isDbConnected: false });
+          console.warn('Error fetching data from Supabase:', error);
+          set({
+            isDbConnected: false,
+            loadError: 'تعذر تحميل القائمة. تحقق من الاتصال أو إعدادات Supabase.'
+          });
         } finally {
           set({ isLoading: false });
         }
@@ -277,33 +378,24 @@ export const useStore = create<AppState>()(
       addProduct: async (newProd) => {
         const productWithId = {
           ...newProd,
-          id: Math.random().toString(36).substring(2, 9)
+          id: Math.random().toString(36).substring(2, 9),
+          image: newProd.image || fallbackImage,
+          updatedAt: new Date().toISOString()
         } as Product;
-        set((state) => ({ products: [...state.products, productWithId] }));
 
-        if (!isSupabaseConfigured) return;
+        if (!isSupabaseConfigured) {
+          set((state) => ({ products: sortByLatestUpdate([productWithId, ...state.products]) }));
+          return;
+        }
         try {
-          const { error } = await supabase.from('products').insert({
-            id: productWithId.id,
-            name: productWithId.name,
-            description: productWithId.description,
-            price: productWithId.price,
-            image: productWithId.image,
-            category_id: productWithId.categoryId,
-            preparation_time: productWithId.preparationTime,
-            calories: productWithId.calories,
-            allergens: productWithId.allergens,
-            available: productWithId.available,
-            seasonal: productWithId.seasonal,
-            bestseller: productWithId.bestseller,
-            is_new: productWithId.isNew,
-            limited: productWithId.limited,
-            moods: productWithId.moods,
-            sizes: productWithId.sizes,
-            customizations: productWithId.customizations,
-            offer_price: productWithId.offerPrice
-          });
+          const { data, error } = await supabase
+            .from('products')
+            .insert(productToDb(productWithId))
+            .select('*')
+            .single();
           if (error) throw error;
+          const savedProduct = data ? mapProductRow(data as ProductRow) : productWithId;
+          set((state) => ({ products: sortByLatestUpdate([savedProduct, ...state.products]) }));
         } catch (error) {
           console.error('Error adding product to Supabase:', error);
           throw error;
@@ -311,14 +403,17 @@ export const useStore = create<AppState>()(
       },
 
       updateProduct: async (id, updates) => {
-        set((state) => ({
-          products: state.products.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-        }));
-
-        if (!isSupabaseConfigured) return;
+        const updatedAt = new Date().toISOString();
+        if (!isSupabaseConfigured) {
+          set((state) => ({
+            products: sortByLatestUpdate(
+              state.products.map((p) => (p.id === id ? { ...p, ...updates, updatedAt } : p))
+            ),
+          }));
+          return;
+        }
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const dbUpdates: any = {};
+          const dbUpdates: DbProductUpdates = {};
           if (updates.name !== undefined) dbUpdates.name = updates.name;
           if (updates.description !== undefined) dbUpdates.description = updates.description;
           if (updates.price !== undefined) dbUpdates.price = updates.price;
@@ -335,13 +430,21 @@ export const useStore = create<AppState>()(
           if (updates.moods !== undefined) dbUpdates.moods = updates.moods;
           if (updates.sizes !== undefined) dbUpdates.sizes = updates.sizes;
           if (updates.customizations !== undefined) dbUpdates.customizations = updates.customizations;
-          if (updates.offerPrice !== undefined) dbUpdates.offer_price = updates.offerPrice;
+          if ('offerPrice' in updates) dbUpdates.offer_price = updates.offerPrice ?? null;
 
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('products')
             .update(dbUpdates)
-            .eq('id', id);
+            .eq('id', id)
+            .select('*')
+            .single();
           if (error) throw error;
+          const savedProduct = data ? mapProductRow(data as ProductRow) : null;
+          set((state) => ({
+            products: sortByLatestUpdate(
+              state.products.map((p) => (p.id === id ? savedProduct || { ...p, ...updates, updatedAt } : p))
+            ),
+          }));
         } catch (error) {
           console.error('Error updating product in Supabase:', error);
           throw error;
@@ -349,14 +452,18 @@ export const useStore = create<AppState>()(
       },
 
       deleteProduct: async (id) => {
-        set((state) => ({
-          products: state.products.filter((p) => p.id !== id),
-        }));
-
-        if (!isSupabaseConfigured) return;
+        if (!isSupabaseConfigured) {
+          set((state) => ({
+            products: state.products.filter((p) => p.id !== id),
+          }));
+          return;
+        }
         try {
           const { error } = await supabase.from('products').delete().eq('id', id);
           if (error) throw error;
+          set((state) => ({
+            products: state.products.filter((p) => p.id !== id),
+          }));
         } catch (error) {
           console.error('Error deleting product from Supabase:', error);
           throw error;
@@ -368,9 +475,13 @@ export const useStore = create<AppState>()(
           ...newCat,
           id: 'cat_' + Math.random().toString(36).substring(2, 9)
         } as Category;
-        set((state) => ({ categories: [...state.categories, catWithId] }));
 
-        if (!isSupabaseConfigured) return;
+        if (!isSupabaseConfigured) {
+          set((state) => ({
+            categories: [...state.categories, catWithId].sort((a, b) => a.sortOrder - b.sortOrder),
+          }));
+          return;
+        }
         try {
           const { error } = await supabase.from('categories').insert({
             id: catWithId.id,
@@ -380,6 +491,9 @@ export const useStore = create<AppState>()(
             sort_order: catWithId.sortOrder
           });
           if (error) throw error;
+          set((state) => ({
+            categories: [...state.categories, catWithId].sort((a, b) => a.sortOrder - b.sortOrder),
+          }));
         } catch (error) {
           console.error('Error adding category to Supabase:', error);
           throw error;
@@ -387,14 +501,16 @@ export const useStore = create<AppState>()(
       },
 
       updateCategory: async (id, updates) => {
-        set((state) => ({
-          categories: state.categories.map((c) => (c.id === id ? { ...c, ...updates } : c)),
-        }));
-
-        if (!isSupabaseConfigured) return;
+        if (!isSupabaseConfigured) {
+          set((state) => ({
+            categories: state.categories
+              .map((c) => (c.id === id ? { ...c, ...updates } : c))
+              .sort((a, b) => a.sortOrder - b.sortOrder),
+          }));
+          return;
+        }
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const dbUpdates: any = {};
+          const dbUpdates: Record<string, string | number> = {};
           if (updates.name !== undefined) dbUpdates.name = updates.name;
           if (updates.nameEn !== undefined) dbUpdates.name_en = updates.nameEn;
           if (updates.icon !== undefined) dbUpdates.icon = updates.icon;
@@ -405,6 +521,11 @@ export const useStore = create<AppState>()(
             .update(dbUpdates)
             .eq('id', id);
           if (error) throw error;
+          set((state) => ({
+            categories: state.categories
+              .map((c) => (c.id === id ? { ...c, ...updates } : c))
+              .sort((a, b) => a.sortOrder - b.sortOrder),
+          }));
         } catch (error) {
           console.error('Error updating category in Supabase:', error);
           throw error;
@@ -412,14 +533,18 @@ export const useStore = create<AppState>()(
       },
 
       deleteCategory: async (id) => {
-        set((state) => ({
-          categories: state.categories.filter((c) => c.id !== id),
-        }));
-
-        if (!isSupabaseConfigured) return;
+        if (!isSupabaseConfigured) {
+          set((state) => ({
+            categories: state.categories.filter((c) => c.id !== id),
+          }));
+          return;
+        }
         try {
           const { error } = await supabase.from('categories').delete().eq('id', id);
           if (error) throw error;
+          set((state) => ({
+            categories: state.categories.filter((c) => c.id !== id),
+          }));
         } catch (error) {
           console.error('Error deleting category from Supabase:', error);
           throw error;
@@ -475,8 +600,10 @@ export const useStore = create<AppState>()(
       },
 
       updateStoreSettings: async (settings) => {
-        set({ storeSettings: settings });
-        if (!isSupabaseConfigured) return;
+        if (!isSupabaseConfigured) {
+          set({ storeSettings: settings });
+          return;
+        }
         try {
           const { data, error: selectError } = await supabase
             .from('store_settings')
@@ -510,6 +637,7 @@ export const useStore = create<AppState>()(
               .insert(dbSettings);
             if (error) throw error;
           }
+          set({ storeSettings: settings });
         } catch (error) {
           console.error('Error updating store settings in Supabase:', error);
           throw error;

@@ -1,7 +1,5 @@
-const CACHE_NAME = 'kunafa-bilali-v1';
+const CACHE_NAME = 'kunafa-bilali-v2';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/images/logo.jpg',
 ];
 
@@ -31,29 +29,55 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - cache first strategy
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
   if (event.request.method !== 'GET') return;
-
-  // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) return;
+
+  const url = new URL(event.request.url);
+  const isNavigation = event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html');
+  const isStaticAsset =
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.startsWith('/images/') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.jpeg') ||
+    url.pathname.endsWith('.webp') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.woff2');
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put('/index.html', response.clone());
+            });
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match('/index.html').then(
+            (cached) =>
+              cached ||
+              new Response('Offline', {
+                status: 503,
+                headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+              })
+          )
+        )
+    );
+    return;
+  }
+
+  if (!isStaticAsset) return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) {
-        // Return cached and fetch update in background
-        fetch(event.request)
-          .then((response) => {
-            if (response && response.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, response.clone());
-              });
-            }
-          })
-          .catch(() => {});
-        return cached;
-      }
+      if (cached) return cached;
 
       return fetch(event.request)
         .then((response) => {
@@ -67,12 +91,6 @@ self.addEventListener('fetch', (event) => {
           });
 
           return response;
-        })
-        .catch(() => {
-          // Return offline fallback if available
-          if (event.request.mode === 'navigate') {
-            return caches.match('/');
-          }
         });
     })
   );

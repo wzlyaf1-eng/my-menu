@@ -82,12 +82,14 @@ export function ProductCard({ product, index }: ProductCardProps) {
         </motion.button>
 
         {/* Price overlay */}
-        <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between">
-          <div className="flex items-center gap-1 text-white/90">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-medium">{product.rating}</span>
+        {product.rating !== undefined && (
+          <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between">
+            <div className="flex items-center gap-1 text-white/90">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+              <span className="text-xs font-medium">{product.rating}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Content */}

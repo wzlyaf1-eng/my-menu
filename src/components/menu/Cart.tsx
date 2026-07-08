@@ -11,9 +11,9 @@ import { toast } from 'sonner';
 export function Cart() {
   const {
     isCartOpen, setCartOpen, cart,
-    updateQuantity, cartTotal, clearCart, tableNumber,
+    updateQuantity, cartTotal, clearCart, tableNumber, removeFromCart,
     orderType, setOrderType, lastOrder, setLastOrder,
-    submitOrder, storeSettings,
+    submitOrder, storeSettings, products,
   } = useStore();
 
   const [showCheckout, setShowCheckout] = useState(false);
@@ -24,10 +24,61 @@ export function Cart() {
 
   const formatPrice = (price: number) => new Intl.NumberFormat('ar-IQ').format(price);
 
+  const resolveCartItems = () =>
+    cart
+      .map((item) => {
+        const currentProduct = products.find((product) => product.id === item.product.id);
+        if (!currentProduct || currentProduct.available === false) return null;
+        return { ...item, product: currentProduct };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  const itemTotal = (item: (typeof cart)[number]) => {
+    const basePrice = item.product.offerPrice ?? item.product.price;
+    const sizePrice = item.selectedSize?.price || 0;
+    const customPrice = item.selectedCustomizations.reduce((sum, selected) => {
+      const group = item.product.customizations?.find((customization) => customization.id === selected.groupId);
+      return (
+        sum +
+        selected.optionIds.reduce((optionSum, optionId) => {
+          const option = group?.options.find((candidate) => candidate.id === optionId);
+          return optionSum + (option?.price || 0);
+        }, 0)
+      );
+    }, 0);
+    return (basePrice + sizePrice + customPrice) * item.quantity;
+  };
+
   const handleWhatsAppOrder = () => {
     if (cart.length === 0) return;
+    if (!storeSettings.isOpen) {
+      toast.error('المتجر مغلق حالياً ولا يمكن إرسال الطلب');
+      return;
+    }
+    if (!storeSettings.whatsapp.trim()) {
+      toast.error('رقم واتساب غير مضاف في إعدادات المتجر');
+      return;
+    }
 
     const type = orderType || 'dine-in';
+    if (type === 'delivery' && (!customerName.trim() || !phone.trim() || !address.trim())) {
+      toast.error('يرجى إدخال الاسم ورقم الهاتف والعنوان للتوصيل');
+      return;
+    }
+
+    const resolvedItems = resolveCartItems();
+    if (resolvedItems.length !== cart.length) {
+      cart.forEach((item) => {
+        const currentProduct = products.find((product) => product.id === item.product.id);
+        if (!currentProduct || currentProduct.available === false) {
+          removeFromCart(item.product.id);
+        }
+      });
+      toast.error('تم تحديث السلة. بعض المنتجات لم تعد متاحة.');
+      return;
+    }
+
+    const resolvedTotal = resolvedItems.reduce((sum, item) => sum + itemTotal(item), 0);
     let message = `*طلب جديد من ${storeSettings.name}*\n\n`;
 
     message += `*نوع الطلب:* ${type === 'dine-in' ? 'طلب داخل الصالة' : 'طلب دلفري'}\n`;
@@ -45,7 +96,7 @@ export function Cart() {
     message += `\n*المنتجات:*\n`;
     message += `─────────────────\n`;
 
-    cart.forEach((item, i) => {
+    resolvedItems.forEach((item, i) => {
       message += `${i + 1}. *${item.product.name}*\n`;
       message += `   الكمية: ${item.quantity}\n`;
       if (item.selectedSize) {
@@ -64,23 +115,22 @@ export function Cart() {
       if (item.notes) {
         message += `   ملاحظات: ${item.notes}\n`;
       }
-      const itemPrice = item.product.offerPrice || item.product.price;
-      message += `   السعر: ${formatPrice(itemPrice * item.quantity)} د.ع\n\n`;
+      message += `   السعر: ${formatPrice(itemTotal(item))} د.ع\n\n`;
     });
 
     message += `─────────────────\n`;
-    message += `*الإجمالي:* ${formatPrice(cartTotal())} د.ع\n`;
+    message += `*الإجمالي:* ${formatPrice(resolvedTotal)} د.ع\n`;
     message += `\nشكراً لاختياركم ${storeSettings.name}! ☕`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${storeSettings.whatsapp}?text=${encodedMessage}`;
 
     // Submit order to database
-    submitOrder(tableNumber, type, cart, cartTotal()).catch((err) => {
+    submitOrder(tableNumber, type, resolvedItems, resolvedTotal).catch((err) => {
       console.error('Failed to save order to database:', err);
     });
 
-    setLastOrder([...cart]);
+    setLastOrder([...resolvedItems]);
     window.open(whatsappUrl, '_blank');
     toast.success('تم فتح واتساب لإرسال الطلب');
     clearCart();
@@ -195,9 +245,7 @@ export function Cart() {
                               </button>
                             </div>
                             <span className="font-bold text-primary text-sm price-tag">
-                              {formatPrice(
-                                (item.product.offerPrice || item.product.price) * item.quantity
-                              )} د.ع
+                              {formatPrice(itemTotal(item))} د.ع
                             </span>
                           </div>
                         </div>
@@ -218,9 +266,10 @@ export function Cart() {
                       </div>
                       <Button
                         onClick={() => setShowCheckout(true)}
+                        disabled={!storeSettings.isOpen}
                         className="w-full h-12 rounded-2xl text-base font-bold gap-2"
                       >
-                        متابعة الطلب
+                        {storeSettings.isOpen ? 'متابعة الطلب' : 'المتجر مغلق حالياً'}
                         <ChevronDown className="h-4 w-4" />
                       </Button>
                     </>
@@ -319,6 +368,7 @@ export function Cart() {
                         </Button>
                         <Button
                           onClick={handleWhatsAppOrder}
+                          disabled={!storeSettings.isOpen}
                           className="flex-[2] h-11 rounded-xl font-bold gap-2"
                         >
                           <Send className="h-4 w-4" />

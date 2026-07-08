@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export function Header() {
-  const { searchQuery, setSearchQuery, isDarkMode, toggleDarkMode, tableNumber } = useStore();
+  const { searchQuery, setSearchQuery, isDarkMode, toggleDarkMode, tableNumber, storeSettings } = useStore();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const logo = storeSettings.logo || '/images/logo.jpg';
 
   return (
     <motion.header
@@ -23,13 +24,13 @@ export function Header() {
           whileTap={{ scale: 0.95 }}
         >
           <img
-            src="/images/logo.jpg"
-            alt="كنافة بلالي"
+            src={logo}
+            alt={storeSettings.name}
             className="w-10 h-10 rounded-xl object-cover shadow-md"
           />
           <div className="flex flex-col">
             <span className="font-bold text-base leading-tight text-foreground">
-              كنافة بلالي
+              {storeSettings.name}
             </span>
             {tableNumber && (
               <span className="text-[11px] text-primary font-medium">

@@ -7,7 +7,10 @@ export function OffersBanner() {
   const { products, openProductModal } = useStore();
   const [current, setCurrent] = useState(0);
 
-  const offers = useMemo(() => products.filter((p) => p.offerPrice), [products]);
+  const offers = useMemo(
+    () => products.filter((p) => p.available !== false && p.offerPrice),
+    [products]
+  );
 
   useEffect(() => {
     if (offers.length <= 1) return;

@@ -63,6 +63,15 @@ export function ProductModal() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    const missingRequired = product.customizations?.find(
+      (group) =>
+        group.required &&
+        !customizations.find((customization) => customization.groupId === group.id)?.optionIds.length
+    );
+    if (missingRequired) {
+      toast.error(`يرجى اختيار ${missingRequired.name}`);
+      return;
+    }
     addToCart({
       product,
       quantity,
@@ -186,15 +195,19 @@ export function ProductModal() {
             <div className="p-5 space-y-5">
               {/* Rating & Price */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-lg">{product.rating}</span>
+                {product.rating !== undefined && product.ratingCount !== undefined ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                      <span className="font-bold text-lg">{product.rating}</span>
+                    </div>
+                    <span className="text-muted-foreground text-sm">
+                      ({product.ratingCount} تقييم)
+                    </span>
                   </div>
-                  <span className="text-muted-foreground text-sm">
-                    ({product.ratingCount} تقييم)
-                  </span>
-                </div>
+                ) : (
+                  <div />
+                )}
                 <div className="flex items-center gap-1.5">
                   {product.offerPrice ? (
                     <>

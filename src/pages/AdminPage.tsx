@@ -4,10 +4,11 @@ import {
   LayoutDashboard, Coffee, Grid3X3, Tag, Settings,
   BarChart3, QrCode, LogOut, Plus, Edit2,
   Trash2, TrendingUp, DollarSign, Users, ShoppingBag,
-  ArrowUpRight, ArrowDownRight, Moon, Sun
+  ArrowUpRight, ArrowDownRight, Moon, Sun, Loader2
 } from 'lucide-react';
 import { useStore } from '@/stores/useStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import { moods as demoMoods } from '@/data/demo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,11 +19,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ImageUploadInput } from '@/components/shared/ImageUploadInput';
+import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
+import type { Category, Product } from '@/types';
 
 type AdminTab = 'dashboard' | 'products' | 'categories' | 'offers' | 'analytics' | 'qr' | 'settings';
 
@@ -58,8 +61,10 @@ const COLORS = ['#D48234', '#E8A853', '#8B6914', '#C4956A', '#A67B5B'];
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const { session, isAuthLoading } = useAuth();
   const { toggleDarkMode, isDarkMode, products, categories, fetchData } = useStore();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,11 +72,12 @@ export function AdminPage() {
   const [visitsCount, setVisitsCount] = useState<number>(0);
 
   useEffect(() => {
+    if (!session) return;
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, session]);
 
   useEffect(() => {
-    if (!isAuthenticated || !isSupabaseConfigured) return;
+    if (!session || !isSupabaseConfigured) return;
 
     async function loadAdminStats() {
       try {
@@ -94,7 +100,7 @@ export function AdminPage() {
     }
 
     loadAdminStats();
-  }, [isAuthenticated]);
+  }, [session]);
 
   const dynamicSalesData = useMemo(() => {
     if (!isSupabaseConfigured || orders.length === 0) {
@@ -155,16 +161,36 @@ export function AdminPage() {
     return new Intl.NumberFormat('ar-IQ').format(visitsCount);
   }, [visitsCount]);
 
-  const handleLogin = () => {
-    if (password === 'admin') {
-      setIsAuthenticated(true);
+  const handleLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!isSupabaseConfigured) {
+      toast.error('Supabase غير مهيأ لتسجيل الدخول');
+      return;
+    }
+    setIsSigningIn(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
       toast.success('تم تسجيل الدخول بنجاح');
-    } else {
-      toast.error('كلمة المرور غير صحيحة');
+    } catch {
+      toast.error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
-  if (!isAuthenticated) {
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Spinner className="h-10 w-10" />
+      </div>
+    );
+  }
+
+  if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-stone-950 dark:to-stone-900 p-4">
         <motion.div
@@ -179,26 +205,33 @@ export function AdminPage() {
               className="w-20 h-20 rounded-2xl mx-auto mb-4 object-cover shadow-premium"
             />
             <h1 className="text-xl font-bold">لوحة التحكم</h1>
-            <p className="text-sm text-muted-foreground mt-1">أدخل كلمة المرور للمتابعة</p>
+            <p className="text-sm text-muted-foreground mt-1">سجل الدخول للمتابعة</p>
           </div>
 
-          <div className="space-y-3">
+          <form onSubmit={handleLogin} className="space-y-3">
+            <Input
+              type="email"
+              placeholder="البريد الإلكتروني"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-12 rounded-xl text-center"
+              dir="ltr"
+              required
+            />
             <Input
               type="password"
               placeholder="كلمة المرور"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               className="h-12 rounded-xl text-center text-lg tracking-widest"
               dir="rtl"
+              required
             />
-            <Button onClick={handleLogin} className="w-full h-12 rounded-xl font-bold">
-              تسجيل الدخول
+            <Button type="submit" disabled={isSigningIn} className="w-full h-12 rounded-xl font-bold">
+              {isSigningIn && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isSigningIn ? 'جاري تسجيل الدخول' : 'تسجيل الدخول'}
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              كلمة المرور الافتراضية: admin
-            </p>
-          </div>
+          </form>
         </motion.div>
       </div>
     );
@@ -225,7 +258,7 @@ export function AdminPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsAuthenticated(false)}
+              onClick={() => supabase.auth.signOut()}
               className="gap-1"
             >
               <LogOut className="h-4 w-4" />
@@ -448,11 +481,12 @@ function DashboardTab({
 
 // Products Tab
 function ProductsTab() {
-  const { products, categories, addProduct, updateProduct, deleteProduct } = useStore();
+  const { products, categories, addProduct, updateProduct, deleteProduct, isLoading } = useStore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -490,7 +524,7 @@ function ProductsTab() {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (product: any) => {
+  const openEditDialog = (product: Product) => {
     setDialogMode('edit');
     setSelectedProduct(product);
     setName(product.name);
@@ -510,7 +544,7 @@ function ProductsTab() {
     setIsDialogOpen(true);
   };
 
-  const openDeleteDialog = (product: any) => {
+  const openDeleteDialog = (product: Product) => {
     setSelectedProduct(product);
     setIsDeleteOpen(true);
   };
@@ -529,8 +563,12 @@ function ProductsTab() {
       toast.error('يرجى تحديد الفئة');
       return;
     }
+    if (offerPrice && offerPrice >= price) {
+      toast.error('سعر العرض يجب أن يكون أقل من السعر الأساسي');
+      return;
+    }
 
-    const productData = {
+    const productData: Omit<Product, 'id'> = {
       name: name.trim(),
       description: description.trim(),
       price: Number(price),
@@ -547,30 +585,34 @@ function ProductsTab() {
       preparationTime: preparationTime.trim()
     };
 
+    setIsSubmitting(true);
     try {
       if (dialogMode === 'add') {
         await addProduct(productData);
         toast.success('تمت إضافة المنتج بنجاح');
-      } else {
+      } else if (selectedProduct) {
         await updateProduct(selectedProduct.id, productData);
         toast.success('تم تحديث المنتج بنجاح');
       }
       setIsDialogOpen(false);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('حدث خطأ أثناء حفظ المنتج');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedProduct) return;
+    setIsSubmitting(true);
     try {
       await deleteProduct(selectedProduct.id);
       toast.success('تم حذف المنتج بنجاح');
       setIsDeleteOpen(false);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('حدث خطأ أثناء حذف المنتج');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -596,6 +638,11 @@ function ProductsTab() {
       </div>
 
       <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+        {isLoading && products.length === 0 ? (
+          <div className="flex items-center justify-center py-16">
+            <Spinner className="h-8 w-8" />
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
@@ -663,6 +710,7 @@ function ProductsTab() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Product Add/Edit Dialog */}
@@ -779,8 +827,11 @@ function ProductsTab() {
             </div>
 
             <DialogFooter className="flex gap-2 justify-end pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
-              <Button type="submit">حفظ التغييرات</Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>إلغاء</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                حفظ التغييرات
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -797,8 +848,11 @@ function ProductsTab() {
             <p className="text-xs text-muted-foreground">لا يمكن التراجع عن هذا الإجراء وسيتم حذفه فوراً من المتجر وقاعدة البيانات.</p>
           </div>
           <DialogFooter className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>إلغاء</Button>
-            <Button variant="destructive" onClick={handleDelete}>حذف نهائي</Button>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={isSubmitting}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              حذف نهائي
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -808,11 +862,12 @@ function ProductsTab() {
 
 // Categories Tab
 function CategoriesTab() {
-  const { categories, products, addCategory, updateCategory, deleteCategory } = useStore();
+  const { categories, products, addCategory, updateCategory, deleteCategory, isLoading } = useStore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
-  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -830,7 +885,7 @@ function CategoriesTab() {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (category: any) => {
+  const openEditDialog = (category: Category) => {
     setDialogMode('edit');
     setSelectedCategory(category);
     setName(category.name);
@@ -840,7 +895,7 @@ function CategoriesTab() {
     setIsDialogOpen(true);
   };
 
-  const openDeleteDialog = (category: any) => {
+  const openDeleteDialog = (category: Category) => {
     setSelectedCategory(category);
     setIsDeleteOpen(true);
   };
@@ -856,37 +911,47 @@ function CategoriesTab() {
       return;
     }
 
-    const catData = {
+    const catData: Omit<Category, 'id'> = {
       name: name.trim(),
       nameEn: nameEn.trim(),
       icon,
       sortOrder: Number(sortOrder)
     };
 
+    setIsSubmitting(true);
     try {
       if (dialogMode === 'add') {
         await addCategory(catData);
         toast.success('تمت إضافة الفئة بنجاح');
-      } else {
+      } else if (selectedCategory) {
         await updateCategory(selectedCategory.id, catData);
         toast.success('تم تحديث الفئة بنجاح');
       }
       setIsDialogOpen(false);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('حدث خطأ أثناء حفظ الفئة');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedCategory) return;
+    const linkedProductsCount = products.filter((product) => product.categoryId === selectedCategory.id).length;
+    if (linkedProductsCount > 0) {
+      toast.error('لا يمكن حذف فئة تحتوي على منتجات. انقل المنتجات أولاً.');
+      setIsDeleteOpen(false);
+      return;
+    }
+    setIsSubmitting(true);
     try {
       await deleteCategory(selectedCategory.id);
       toast.success('تم حذف الفئة بنجاح');
       setIsDeleteOpen(false);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('حدث خطأ أثناء حذف الفئة');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -905,6 +970,11 @@ function CategoriesTab() {
         </Button>
       </div>
 
+      {isLoading && categories.length === 0 ? (
+        <div className="flex items-center justify-center py-16">
+          <Spinner className="h-8 w-8" />
+        </div>
+      ) : (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {categories.map((cat, i) => {
           const count = products.filter((p) => p.categoryId === cat.id).length;
@@ -941,6 +1011,7 @@ function CategoriesTab() {
           );
         })}
       </div>
+      )}
 
       {/* Category Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -983,8 +1054,11 @@ function CategoriesTab() {
             </div>
 
             <DialogFooter className="flex gap-2 justify-end pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
-              <Button type="submit">حفظ الفئة</Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>إلغاء</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                حفظ الفئة
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1001,8 +1075,11 @@ function CategoriesTab() {
             <p className="text-xs text-muted-foreground text-rose-400">تنبيه: سيؤدي حذف الفئة إلى جعل جميع المنتجات المرتبطة بها تظهر كـ "غير مصنفة" أو قد تختفي من تصفية المجموعات.</p>
           </div>
           <DialogFooter className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>إلغاء</Button>
-            <Button variant="destructive" onClick={handleDelete}>حذف نهائي</Button>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={isSubmitting}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              حذف نهائي
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1012,8 +1089,82 @@ function CategoriesTab() {
 
 // Offers Tab
 function OffersTab() {
-  const { products } = useStore();
+  const { products, updateProduct } = useStore();
   const offers = products.filter((p) => p.offerPrice);
+  const availableProducts = products.filter((p) => !p.offerPrice);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productId, setProductId] = useState('');
+  const [offerPrice, setOfferPrice] = useState<number | ''>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const openAddDialog = () => {
+    const firstProduct = availableProducts[0];
+    setDialogMode('add');
+    setSelectedProduct(firstProduct || null);
+    setProductId(firstProduct?.id || '');
+    setOfferPrice('');
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (product: Product) => {
+    setDialogMode('edit');
+    setSelectedProduct(product);
+    setProductId(product.id);
+    setOfferPrice(product.offerPrice || '');
+    setIsDialogOpen(true);
+  };
+
+  const openDeleteDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDeleteOpen(true);
+  };
+
+  const selectedOfferProduct = products.find((product) => product.id === productId) || selectedProduct;
+
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedOfferProduct || !productId) {
+      toast.error('يرجى تحديد المنتج');
+      return;
+    }
+    const numericOfferPrice = Number(offerPrice);
+    if (!Number.isFinite(numericOfferPrice) || numericOfferPrice <= 0) {
+      toast.error('يرجى إدخال سعر عرض صالح');
+      return;
+    }
+    if (numericOfferPrice >= selectedOfferProduct.price) {
+      toast.error('سعر العرض يجب أن يكون أقل من السعر الأساسي');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await updateProduct(selectedOfferProduct.id, { offerPrice: numericOfferPrice });
+      toast.success(dialogMode === 'add' ? 'تمت إضافة العرض بنجاح' : 'تم تحديث العرض بنجاح');
+      setIsDialogOpen(false);
+    } catch {
+      toast.error('حدث خطأ أثناء حفظ العرض');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedProduct) return;
+    setIsSubmitting(true);
+    try {
+      await updateProduct(selectedProduct.id, { offerPrice: undefined });
+      toast.success('تم إلغاء العرض بنجاح');
+      setIsDeleteOpen(false);
+    } catch {
+      toast.error('حدث خطأ أثناء إلغاء العرض');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <motion.div
@@ -1024,13 +1175,18 @@ function OffersTab() {
     >
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">العروض ({offers.length})</h2>
-        <Button size="sm" className="gap-1 rounded-xl">
+        <Button size="sm" className="gap-1 rounded-xl" onClick={openAddDialog} disabled={availableProducts.length === 0}>
           <Plus className="h-4 w-4" />
           إضافة عرض
         </Button>
       </div>
 
       <div className="space-y-3">
+        {offers.length === 0 && (
+          <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+            لا توجد عروض حالياً
+          </div>
+        )}
         {offers.map((offer) => {
           const discount = Math.round(((offer.price - (offer.offerPrice || 0)) / offer.price) * 100);
           return (
@@ -1056,10 +1212,10 @@ function OffersTab() {
                 </div>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(offer)}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => openDeleteDialog(offer)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -1067,6 +1223,80 @@ function OffersTab() {
           );
         })}
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">
+              {dialogMode === 'add' ? 'إضافة عرض' : 'تعديل العرض'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4 text-right">
+            <div className="space-y-1">
+              <Label htmlFor="offer-product">المنتج</Label>
+              <select
+                id="offer-product"
+                value={productId}
+                onChange={(event) => {
+                  setProductId(event.target.value);
+                  setSelectedProduct(products.find((product) => product.id === event.target.value) || null);
+                }}
+                disabled={dialogMode === 'edit'}
+                className="w-full h-10 rounded-md border border-input bg-card px-3 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring disabled:opacity-60"
+              >
+                {dialogMode === 'edit' && selectedProduct ? (
+                  <option value={selectedProduct.id}>{selectedProduct.name}</option>
+                ) : (
+                  availableProducts.map((product) => (
+                    <option key={product.id} value={product.id}>{product.name}</option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="offer-price">سعر العرض (د.ع)</Label>
+              <Input
+                id="offer-price"
+                type="number"
+                value={offerPrice}
+                onChange={(event) => setOfferPrice(event.target.value ? Number(event.target.value) : '')}
+                min={1}
+                required
+              />
+              {selectedOfferProduct && (
+                <p className="text-xs text-muted-foreground">
+                  السعر الأساسي: {selectedOfferProduct.price.toLocaleString()} د.ع
+                </p>
+              )}
+            </div>
+            <DialogFooter className="flex gap-2 justify-end pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>إلغاء</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                حفظ العرض
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">إلغاء العرض</DialogTitle>
+          </DialogHeader>
+          <div className="text-right space-y-3 py-3">
+            <p className="text-sm">إلغاء العرض عن <span className="font-bold text-rose-500">"{selectedProduct?.name}"</span>؟</p>
+          </div>
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={isSubmitting}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              إلغاء العرض
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
@@ -1248,19 +1478,22 @@ function QRTab() {
 function SettingsTab() {
   const { storeSettings, updateStoreSettings } = useStore();
   const [settings, setSettings] = useState(storeSettings);
-  const [prevStoreSettings, setPrevStoreSettings] = useState(storeSettings);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (storeSettings !== prevStoreSettings) {
-    setPrevStoreSettings(storeSettings);
+  useEffect(() => {
     setSettings(storeSettings);
-  }
+  }, [storeSettings]);
 
-  const handleSave = async () => {
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSubmitting(true);
     try {
       await updateStoreSettings(settings);
       toast.success('تم حفظ الإعدادات بنجاح');
     } catch {
       toast.error('حدث خطأ أثناء حفظ الإعدادات');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1273,7 +1506,25 @@ function SettingsTab() {
     >
       <h2 className="text-xl font-bold">إعدادات المتجر</h2>
 
-      <div className="bg-card rounded-2xl p-5 border border-border/50 shadow-premium space-y-4">
+      <form onSubmit={handleSave} className="bg-card rounded-2xl p-5 border border-border/50 shadow-premium space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">شعار المتجر</label>
+          <div className="flex items-center gap-4">
+            <img
+              src={settings.logo || '/images/logo.jpg'}
+              alt={settings.name}
+              className="w-16 h-16 rounded-2xl object-cover border border-border/50"
+            />
+            <div className="flex-1">
+              <ImageUploadInput
+                value={settings.logo}
+                onChange={(url) => setSettings({ ...settings, logo: url })}
+                folder="branding"
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <label className="text-sm font-medium">اسم المتجر</label>
           <Input
@@ -1315,6 +1566,26 @@ function SettingsTab() {
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm font-medium">انستغرام</label>
+          <Input
+            value={settings.instagram ?? ''}
+            onChange={(e) => setSettings({ ...settings, instagram: e.target.value })}
+            className="rounded-xl ltr"
+            dir="ltr"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">فيسبوك</label>
+          <Input
+            value={settings.facebook ?? ''}
+            onChange={(e) => setSettings({ ...settings, facebook: e.target.value })}
+            className="rounded-xl ltr"
+            dir="ltr"
+          />
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm font-medium">ساعات العمل</label>
           <Input
             value={settings.workingHours}
@@ -1339,12 +1610,38 @@ function SettingsTab() {
           </select>
         </div>
 
+        <div className="space-y-2">
+          <label className="text-sm font-medium">نسبة الضريبة (٪)</label>
+          <Input
+            type="number"
+            value={settings.taxRate}
+            onChange={(e) => setSettings({ ...settings, taxRate: Number(e.target.value) })}
+            className="rounded-xl"
+            min={0}
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-border/50 p-3">
+          <div className="text-right">
+            <label htmlFor="settings-is-open" className="text-sm font-medium cursor-pointer">
+              المتجر مفتوح الآن
+            </label>
+            <p className="text-xs text-muted-foreground">عند الإغلاق يمكن للزبائن التصفح فقط</p>
+          </div>
+          <Switch
+            id="settings-is-open"
+            checked={settings.isOpen}
+            onCheckedChange={(checked) => setSettings({ ...settings, isOpen: checked })}
+          />
+        </div>
+
         <Separator />
 
-        <Button onClick={handleSave} className="w-full h-12 rounded-xl font-bold">
+        <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl font-bold">
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
           حفظ الإعدادات
         </Button>
-      </div>
+      </form>
     </motion.div>
   );
 }

@@ -26,7 +26,7 @@ export function MoodFilter() {
   // Get recommended products based on selected moods
   const recommendedProducts: (import('@/types').Product & { reason?: string })[] = selectedMoods.length > 0
     ? products
-        .filter((p) => selectedMoods.some((moodId) => p.moods.includes(moodId)))
+        .filter((p) => p.available !== false && selectedMoods.some((moodId) => p.moods.includes(moodId)))
         .map((p) => {
           const reasons = selectedMoods
             .map((m) => moodReasons[m]?.[p.id])
